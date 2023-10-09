@@ -1,11 +1,11 @@
-import random
 import socket
 import threading
 import json
+import uuid
 
 print("\033c")
 
-PORT = 5000
+PORT = 4000
 # size of data in bytes that can go in one packets
 HEADER = 1024
 FORMAT = "utf-8"
@@ -14,7 +14,22 @@ DISCONNECT_MESSAGE = "!DISCONNECTED!"
 FIRST_CONNECTION = "!FIRST_CONNECTION!"
 SERVER = socket.gethostbyname(socket.gethostname())
 ADDRESS = (SERVER, PORT)
-MAX_SIZE = 1000001
+MAX_SIZE: int = 10000000
+
+# Define ANSI escape codes for text colors
+RESET = "\033[0m"
+RED = "\033[31m"
+GREEN = "\033[32m"
+YELLOW = "\033[33m"
+BLUE = "\033[34m"
+BOLD = "\033[1m"
+
+# Function to print colored text
+
+
+def colored_print(text, color):
+    print(color + text + RESET)
+
 
 # stores the client information like username
 user_list = {}
@@ -35,6 +50,15 @@ def sieve_of_eratosthenes():
             isPrime[j] = False
             j += i
 
+
+def check_prime(number):
+    if number < 2:
+        return False
+    for i in range(2, int(number ** 0.5) + 1):
+        if number % i == 0:
+            return False
+    return True
+
 # Here we made a socket instance and passed it two parameters. The first
 # parameter is AF_INET and the second one is SOCK_STREAM. AF_INET refers
 # to the address-family ipv4. The SOCK_STREAM means connection-oriented
@@ -44,17 +68,20 @@ def sieve_of_eratosthenes():
 try:
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 except socket.error as err:
-    print(f"[UNABLE TO CREATE SOCKET] : {err}...\n")
+    colored_print(f"[UNABLE TO CREATE SOCKET] : {err}...\n", RED)
     exit(0)
 
 # A server has a bind() method which binds it to a specific IP and port so
 # that it can listen to incoming requests on that IP and port.
 
-try:
-    server.bind(ADDRESS)
-except socket.error as err:
-    print(f"[UNABLE TO BIND TO THE SPECIFIC IP AND PORT] : {err}...\n")
-    exit(0)
+while True:
+    try:
+        ADDRESS = (SERVER, PORT)
+        server.bind(ADDRESS)
+        break
+    except socket.error as err:
+        colored_print(f"[UNABLE TO BIND TO THE {ADDRESS}] : {err}...\n", RED)
+        PORT += 1
 
 
 # send message to the client
@@ -65,8 +92,8 @@ def send_message(msg, client_connection, client_address):
         client_connection.send(msg.encode(FORMAT))
     except socket.error as err_x:
         global user_list
-        print(
-            f"[UNABLE TO SEND MESSAGE TO THE {user_list[client_address]['name']}] : {err_x}...\n")
+        colored_print(
+            f"[UNABLE TO SEND MESSAGE TO THE {user_list[client_address]['name']}] : {err_x}...\n", RED)
         del user_list[client_address]
         # exit the helper thread created not the main thread
         exit(0)
@@ -82,27 +109,37 @@ def decode_message(str_received, client_connection, client_address):
         # to the client address and the number which is to be send
         global user_list, isPrime
         user_list[client_address] = {
+            "id": str(uuid.uuid4()),
             "name": client_object['name'],
-            "number": 2,
         }
-        return f"joined the server."
+        return "joined the server."
     else:
+        if client_object['msg'] == DISCONNECT_MESSAGE:
+            return client_object['msg']
         try:
             number = int(client_object['msg'])
-        except ValueError :
-            print("Invalid message. Please enter a valid integer.")
-            exit(0) 
-        if (isPrime[number]):
-            send_message("You have entered a PRIME number", client_connection, client_address)
+        except ValueError:
+            colored_print(
+                "Invalid message. Please enter a valid integer.", RED)
+            send_message("You have entered an INVALID number",
+                         client_connection, client_address)
+            return
+        if number > MAX_SIZE - 1:
+            send_message(f"Enter number smaller than {MAX_SIZE}",
+                         client_connection, client_address)
+        elif (isPrime[number]):
+            send_message("You have entered a PRIME number",
+                         client_connection, client_address)
         else:
-            send_message("You have entered a COMPOSITE number", client_connection, client_address)
+            send_message("You have entered a COMPOSITE number",
+                         client_connection, client_address)
         return client_object['msg']
 
 # handle's client queries
 
 
 def handle_client(client_connection, client_address):
-    print(f"[NEW CONNECTION] {client_address} connected.\n")
+    colored_print(f"[NEW CONNECTION] {client_address} connected.\n", GREEN)
     global user_list
     connected = True
     while connected:
@@ -110,8 +147,8 @@ def handle_client(client_connection, client_address):
         try:
             str_received = client_connection.recv(HEADER).decode(FORMAT)
         except socket.error as err_x:
-            print(
-                f"[UNABLE TO RECIVE MESSAGE FROM THE {user_list[client_address]['name']}] : {err_x}...\n")
+            colored_print(
+                f"[UNABLE TO RECIVE MESSAGE FROM THE {user_list[client_address]['name']}] : {err_x}...\n", RED)
             del user_list[client_address]
             # exit the helper thread created not the main thread
             exit(0)
@@ -124,10 +161,13 @@ def handle_client(client_connection, client_address):
             # disconnect the client from the server if message is
             # !DISCONNECTED!
             connected = False
-            print(f"{user_list[client_address]['name']} is offline now.")
+            colored_print(
+                f"{user_list[client_address]['name']} is offline now.", RED)
+            colored_print(
+                f"[ACTIVE CONNECTIONS] {threading.active_count()-2}\n", YELLOW)
             continue
 
-        print(f"{user_list[client_address]['name']} : {msg}")
+        colored_print(f"{user_list[client_address]['name']} : {msg}", BLUE)
 
     # removing the client from the list after he/she get disconnected
     del user_list[client_address]
@@ -135,12 +175,9 @@ def handle_client(client_connection, client_address):
 
 
 def start():
-    """
-    A server has a listen() method which puts the server into listening mode. This allows the server to listen to incoming connections.
-    """
     server.listen(MAX_CLIENT)
     sieve_of_eratosthenes()
-    print(f"[LISTENING]  server is listening on {SERVER}\n")
+    colored_print(f"[LISTENING]  server is listening on {ADDRESS}\n", GREEN)
     connected = True
     while connected:
         # And last a server has an accept() and close() method. The accept
@@ -149,7 +186,8 @@ def start():
         try:
             client_connection, client_address = server.accept()
         except socket.error as err_x:
-            print(f"[UNABLE TO CONNECT TO THE CLIENTS] : {err_x}...\n")
+            colored_print(
+                f"[UNABLE TO CONNECT TO THE CLIENTS] : {err_x}...\n", RED)
             exit(0)
 
         try:
@@ -157,12 +195,13 @@ def start():
                 client_connection, client_address))
             thread.start()
         except socket.error as err_x:
-            print(f"[UNABLE TO CREATE THREAD] : {err_x}...\n")
+            colored_print(f"[UNABLE TO CREATE THREAD] : {err_x}...\n", RED)
             exit(0)
 
         # -1 bcoz one thread is running the server
-        print(f"[ACTIVE CONNECTIONS] {threading.active_count()-1}\n")
+        colored_print(
+            f"[ACTIVE CONNECTIONS] {threading.active_count()-1}\n", YELLOW)
 
 
-print("[STARTING] server is starting...\n")
+colored_print("[STARTING] server is starting...\n", YELLOW)
 start()
