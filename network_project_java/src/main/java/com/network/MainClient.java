@@ -34,23 +34,25 @@ public class MainClient {
     public void sendAndReceiveMessages() {
         boolean connected = true;
         coloredPrint("Enter your name or alias.", BLUE);
-        Scanner scanner_x = new Scanner(System.in);
-        String name = scanner_x.nextLine();
-        Map<String, String> jsonMap = new HashMap<>();
-        jsonMap.put("name", name);
-        jsonMap.put("msg", FIRST_CONNECTION);
-        String msgToSend = new Gson().toJson(jsonMap);
-        out.println(msgToSend);
+        try (Scanner scanner_x = new Scanner(System.in)) {
+            String name = scanner_x.nextLine();
+            Map<String, String> jsonMap = new HashMap<>();
+            jsonMap.put("name", name);
+            jsonMap.put("msg", FIRST_CONNECTION);
+            String msgToSend = new Gson().toJson(jsonMap);
+            out.println(msgToSend);
+        }
         while (connected) {
             coloredPrint("Enter a number to check whether it's prime:", BLUE);
-            Scanner scanner = new Scanner(System.in);
-            String inputMessage = scanner.nextLine();
-            sendMessage(inputMessage);
-            receiveMessage();
-            coloredPrint("Press Enter to continue or 'exit' to close...", YELLOW);
-            String response = scanner.nextLine();
-            if ("exit".equals(response)) {
-                connected = false;
+            try (Scanner scanner = new Scanner(System.in)) {
+                String inputMessage = scanner.nextLine();
+                sendMessage(inputMessage);
+                receiveMessage();
+                coloredPrint("Press Enter to continue or 'exit' to close...", YELLOW);
+                String response = scanner.nextLine();
+                if ("exit".equals(response)) {
+                    connected = false;
+                }
             }
         }
         closeClientConnection();

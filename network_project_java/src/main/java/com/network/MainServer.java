@@ -77,6 +77,7 @@ public class MainServer {
     private String decodeMessage(String strReceived, Socket clientConnection, InetSocketAddress clientAddress) {
         HashMap<String, String> clientObject;
         clientObject = new Gson().fromJson(strReceived, HashMap.class);
+        
         if (clientObject.get("msg").equals(FIRST_CONNECTION)) {
             userList.put(clientAddress, new HashMap<>());
             userList.get(clientAddress).put("name", clientObject.get("name"));
