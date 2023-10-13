@@ -13,5 +13,7 @@
     ],
     "workbench.activityBar.visible": false,
     "workbench.iconTheme": "material-icon-theme",
-    "workbench.colorTheme": "Tokyo Night Dark"
+    "workbench.colorTheme": "Tokyo Night Dark",
+    "java.debug.settings.onBuildFailureProceed": true,
+    "java.configuration.updateBuildConfiguration": "interactive"
 }
